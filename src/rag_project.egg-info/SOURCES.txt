@@ -1,0 +1,16 @@
+README.md
+pyproject.toml
+src/rag_project/__init__.py
+src/rag_project/__main__.py
+src/rag_project/cli.py
+src/rag_project/hf_inference.py
+src/rag_project/ingest.py
+src/rag_project/loaders.py
+src/rag_project/rag.py
+src/rag_project/settings.py
+src/rag_project.egg-info/PKG-INFO
+src/rag_project.egg-info/SOURCES.txt
+src/rag_project.egg-info/dependency_links.txt
+src/rag_project.egg-info/entry_points.txt
+src/rag_project.egg-info/requires.txt
+src/rag_project.egg-info/top_level.txt
