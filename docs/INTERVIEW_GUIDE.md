@@ -85,7 +85,7 @@ Loader logic:
 - `iter_files(root)` finds all supported files recursively.
 - `load_file(path)` chooses the right loader based on file extension.
 - `load_documents(raw_dir)` returns a list of LangChain `Document` objects.
-
+ 
 Important interview point:
 - Each `Document` includes **page_content** (text) and **metadata** (like `source`, `page`). Metadata is how you later cite sources.
 
