@@ -120,9 +120,13 @@ Trade-offs:
 
 Why overlap exists:
 - Prevents losing meaning when the “best” answer spans a boundary.
+- Ensures that important information at the end of one chunk is also present at the start of the next, so context isn’t lost if a relevant answer crosses chunk boundaries.
+- In interviews, you can say: “Overlap helps preserve context for the model. If a key sentence or fact is split between two chunks, overlap makes sure both chunks contain the full information, improving retrieval accuracy and reducing the chance of missing evidence.”
+- This is especially important for documents where ideas or facts often run across paragraph or section breaks.
 
 How to explain in interviews:
-- “I tuned chunk size and overlap based on document structure and retrieval quality. I use overlap to preserve continuity across chunk boundaries.”
+
+- “I experimented with different chunk sizes and overlaps to find what works best for my documents. For example, I started with a chunk size of 1000 characters and 150 overlap, then checked if the retrieved chunks actually contained the information needed to answer typical questions. If answers were missing or context was cut off, I adjusted the chunk size or overlap. Overlap is important because it helps preserve meaning when information spans across chunk boundaries, so the model doesn’t lose context. I also considered the structure of my documents—if they have lots of short sections, I might use smaller chunks; for longer, continuous text, larger chunks with overlap work better. I validated my choices by running test queries and seeing if the retrieval step returned relevant, complete information.”
 
 ---
 
@@ -153,6 +157,28 @@ During querying:
 1. The question is embedded into the same vector space.
 2. Chroma returns the nearest chunk vectors (similarity search).
 
+<!--
+This section highlights a crucial aspect of working with embedding-based retrieval systems: consistency in the embedding model. When building a vector index (for example, for semantic search or retrieval-augmented generation), the embeddings generated from your data at ingestion time must use the same model as the one used to encode queries at search time. 
+
+If you change the embedding model after building the index, the vector representations of your data and your queries will no longer be compatible, leading to poor or incorrect retrieval results. Therefore, any change in the embedding model requires you to re-embed your data and rebuild the index to maintain retrieval accuracy.
+
+For interviews, be prepared to explain:
+- Why embedding model consistency is important (vector space alignment).
+- What could go wrong if different models are used (semantic mismatch, poor recall/precision).
+- The process of re-indexing when updating or switching embedding models.
+-->
+<!--
+This section highlights a critical point for retrieval-augmented generation (RAG) systems: the embedding model used to convert text into vector representations must remain consistent between the data ingestion phase (when documents are indexed) and the query phase (when user queries are processed). Changing the embedding model after indexing requires rebuilding the index to ensure accurate similarity search and retrieval.
+
+Popular embedding models include:
+- OpenAI's `text-embedding-ada-002`
+- Sentence Transformers (e.g., `all-MiniLM-L6-v2`, `paraphrase-MiniLM-L12-v2`)
+- Cohere's embedding models
+- Google's Universal Sentence Encoder (USE)
+- Hugging Face Transformers models (e.g., `distilbert-base-nli-stsb-mean-tokens`)
+
+Choosing a widely adopted and well-supported embedding model is recommended for compatibility and performance.
+-->
 Critical interview point:
 - You must use the **same embedding model** at ingestion and query time. If you change it, you must rebuild the index.
 
@@ -168,10 +194,64 @@ It stores:
 - documents (chunk text)
 - metadata (`source`, `page`, etc.)
 
-Retrieval steps:
-1. Convert question → embedding
-2. Similarity search for top-$k$
-3. Return `Document` chunks
+### 6.1 Querying the Vector Database: Step-by-Step
+
+When you query the vector database (Chroma), the process is as follows:
+
+**1. Embed the Question**
+- The user’s question is converted into an embedding (a vector) using the *same* embedding model as used during ingestion.
+- This ensures the question and document chunks are represented in the same vector space.
+
+**2. Similarity Search**
+- The vector database (Chroma) performs a similarity search between the question embedding and all stored chunk embeddings.
+- It uses a distance metric (typically cosine similarity or Euclidean distance) to find the most similar vectors.
+- The top-$k$ most similar chunks are selected (where $k$ is configurable, e.g., `RAG_TOP_K=4`).
+
+**3. Retrieve Document Chunks**
+- The database returns the top-$k$ `Document` objects, each containing:
+  - The chunk’s text (`page_content`)
+  - Metadata (such as `source`, `page`, etc.)
+- These chunks are the most relevant pieces of your ingested documents for the given question.
+
+**4. Construct the Prompt**
+- The retrieved chunks are combined with the system instruction and the user’s question to form the prompt for the LLM.
+- Example prompt structure:
+  ```
+  [System instruction]
+  [User question]
+  [Retrieved context: chunk 1, chunk 2, ...]
+  ```
+
+**5. Generate the Answer**
+- The LLM receives the prompt and generates an answer, ideally using only the retrieved context.
+- Optionally, the system can display the sources of the retrieved chunks for transparency.
+
+---
+
+#### Types of Queries Supported
+
+There are two main ways to query the vector database in this project:
+
+1. **Direct Question Query (`rag query "...")`**
+   - You provide a single question.
+   - The system retrieves relevant chunks and generates an answer.
+
+2. **Conversational Query (`rag chat`)**
+   - Supports multi-turn conversations.
+   - Maintains chat history and context across turns.
+   - Each user message is embedded and processed as above, but the prompt may include previous Q&A pairs for continuity.
+
+**Advanced Query Types (optional, for interviews):**
+- **Hybrid Search:** Combine vector similarity with keyword or metadata filters (e.g., only retrieve from certain sources or dates).
+- **Filtered Retrieval:** Use metadata filters (e.g., only retrieve chunks from a specific document or section).
+- **Re-ranking:** Retrieve more than $k$ chunks, then use another model to re-rank for relevance.
+
+---
+
+#### Interview-Ready Explanation
+
+- “At query time, I embed the user’s question and perform a similarity search in the vector database to retrieve the top-$k$ most relevant document chunks. These chunks, along with the question and a strict system instruction, are used to construct the prompt for the LLM. The LLM then generates an answer grounded in the retrieved context. I can query the system either with single questions or in a conversational mode, and I can also filter or re-rank results for more advanced use cases.”
+
 
 Important knob:
 - `RAG_TOP_K` (defaults to 4)
