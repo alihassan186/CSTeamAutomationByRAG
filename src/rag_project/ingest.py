@@ -31,6 +31,7 @@ def ingest(settings: Settings, *, reset: bool = False) -> dict:
         if callable(persist):
             persist()
 
+    print(f"Ingestion complete: {len(docs)} documents loaded, {len(chunks)} chunks created.")
     return {
         "raw_dir": str(raw_dir),
         "chroma_dir": str(chroma_dir),

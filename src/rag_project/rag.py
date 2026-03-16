@@ -15,17 +15,20 @@ from rag_project.settings import Settings
 
 def get_llm(settings: Settings):
     if settings.rag_provider == "huggingface":
+        try:
+            from langchain_community.llms import HuggingFaceHub
+        except ImportError as e:
+            raise RuntimeError("Install HuggingFace support: pip install langchain-community") from e
+
         if not settings.huggingfacehub_api_token:
             raise RuntimeError(
                 "Missing HUGGINGFACEHUB_API_TOKEN. Set it in .env (free token from https://huggingface.co/settings/tokens)."
             )
 
-        return RunnableLambda(
-            lambda prompt: hf_generate(
-                token=settings.huggingfacehub_api_token or "",
-                model=settings.hf_model,
-                prompt=prompt,
-            )
+        return HuggingFaceHub(
+            repo_id=settings.hf_model,
+            huggingfacehub_api_token=settings.huggingfacehub_api_token,
+            model_kwargs={"temperature": 0.2, "max_length": 512},
         )
 
     if settings.rag_provider == "openai":

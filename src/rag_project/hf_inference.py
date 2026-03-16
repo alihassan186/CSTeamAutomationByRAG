@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
+import numpy as np
 from huggingface_hub import InferenceClient
 from langchain_core.embeddings import Embeddings
 
@@ -22,6 +23,14 @@ def _to_vector(obj: Any) -> list[float]:
     # HF feature-extraction can return:
     # - list[float] (sentence embedding)
     # - list[list[float]] (token embeddings) -> mean pool
+    # - np.ndarray (numpy array)
+    if isinstance(obj, np.ndarray):
+        if obj.ndim == 1:
+            return obj.tolist()
+        elif obj.ndim == 2:
+            return _mean_pool(obj.tolist())
+        else:
+            raise TypeError(f"Unexpected numpy array shape: {obj.shape}")
     if isinstance(obj, list) and obj and isinstance(obj[0], (int, float)):
         return [float(x) for x in obj]
     if isinstance(obj, list) and obj and isinstance(obj[0], list):
