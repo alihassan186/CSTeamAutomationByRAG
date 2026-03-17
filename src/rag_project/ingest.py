@@ -8,7 +8,7 @@ from rag_project.loaders import load_documents
 from rag_project.rag import get_embeddings, get_vectorstore
 from rag_project.settings import Settings
 
-
+# TODO: Add logging and error handling
 def ingest(settings: Settings, *, reset: bool = False) -> dict:
     raw_dir = settings.rag_raw_dir
     chroma_dir = settings.rag_chroma_dir
